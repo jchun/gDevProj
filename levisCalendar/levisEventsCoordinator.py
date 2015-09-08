@@ -8,6 +8,7 @@ import os
 
 import levisParser
 savedLocalEvents = levisParser.savedLocalEvents
+savedRemoteEvents = {}
 
 try:
     import argparse
@@ -48,7 +49,6 @@ def get_credentials():
     return credentials
 
 def createEvent(service, eventTimeDate, eventTitle, eventURL):
-    eventTimeDate = datetime.date(eventTimeDate[2], eventTimeDate[0], eventTimeDate[1]).isoformat()
     event = {
       'summary': eventTitle,
       'location': '4900 Marie P Bartolo Way, Santa Clara, CA 95054',
@@ -88,7 +88,9 @@ def getEvents(service, numEvents):
     for event in events:
         start = event['start'].get('dateTime', event['start'].get('date'))
         print start, event['summary']
+        #print event
 
+        savedRemoteEvents[start] = event['summary']
 
 def main():
     """Shows basic usage of the Google Calendar API.
@@ -100,14 +102,20 @@ def main():
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('calendar', 'v3', http=http)
     
+    getEvents(service, 100) 
+
     levisParser.main()
     for (eventTimeDate, eventInfo)  in savedLocalEvents.items():
         print eventTimeDate 
         #print eventInfo
         eventTitle, eventURL = eventInfo
+        
+        if eventTimeDate not in savedRemoteEvents:
+            createEvent(service, eventTimeDate, eventTitle, eventURL)
+        else:
+            print 'Skipping add, we already know this event!'    
 
-    createEvent(service, eventTimeDate, eventTitle, eventURL)
-    getEvents(service, 10) 
+    getEvents(service, 100) 
 
 if __name__ == '__main__':
     main()

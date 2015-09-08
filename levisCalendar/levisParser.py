@@ -24,7 +24,8 @@ def cleanDate(date):
     eventYear = int(dateSplit[2])
     eventTime = '0:00'
 
-    return (eventMonth, eventDay, eventYear, eventTime)
+    eventTimeDate = datetime.date(eventYear, eventMonth, eventDay).isoformat()
+    return eventTimeDate
 
 def parseEvent(eventLink):
     '''
