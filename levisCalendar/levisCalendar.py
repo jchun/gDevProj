@@ -6,14 +6,26 @@ August 27th 2015
 '''
 import argparse
 from bs4 import BeautifulSoup
+import calendar
 import datetime
 import os
 import re
 import time
 import urllib2
 
-calendarPage = 'http://www.levisstadium.com/events/category/tickets/'
+import gCalendar
 
+calendarPage = 'http://www.levisstadium.com/events/category/tickets/'
+months = {v: k for k,v in enumerate(calendar.month_abbr)}
+
+def cleanDate(date):
+    dateSplit = date.split()
+    eventMonth = months[dateSplit[0][0:3]]
+    eventDay = int(re.sub('[^0-9]','', date.split()[1]))
+    eventYear = int(dateSplit[2])
+    eventTime = '0:00'
+
+    return (eventMonth, eventDay, eventYear, eventTime)
 
 def parseEvent(eventLink):
     '''
@@ -39,11 +51,21 @@ def parseEvent(eventLink):
             date = dateField.findAll('span', { 'class' : 'text' })    
         date = date[0].string
     
+    ''' 
     print '*' * 15
     print title
     print date
+    print months[date[0:3]]
     print eventLink
     print '*' * 15
+    '''
+
+    date = cleanDate(date)
+
+    parsedEvent = title, date, eventLink
+    print parsedEvent
+    return parsedEvent
+
 
 
 def parseCalendar(calendarLink):
@@ -90,5 +112,6 @@ if __name__ == '__main__':
    
     parseCalendar(calendarPage)
         
-    
+    #gCalendar.main()
+
     print 'Time taken: ' + str(time.time()-startTime) + ' secs'
