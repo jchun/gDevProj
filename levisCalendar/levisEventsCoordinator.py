@@ -142,8 +142,6 @@ def main():
 
     levisParser.main()
     for (eventTitle, eventInfo)  in savedLocalEvents.items():
-        #print eventDateTime 
-        #print eventInfo
         eventDateTime, eventURL = eventInfo
         
         if eventTitle not in savedRemoteEvents:

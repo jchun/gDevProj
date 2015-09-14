@@ -96,7 +96,7 @@ def parseCalendar(calendarLink):
     '''
     Parse the main events page
     '''
-    calSoup = soupIt(calendarPage)
+    calSoup = soupIt(calendarLink)
     events = calSoup.findAll('article')
     
     if not events:
@@ -108,6 +108,26 @@ def parseCalendar(calendarLink):
             links = event.findAll('a', href=True)
             eventLink = links[1]['href']
             parseEvent(eventLink)
+   
+    nextNav = calSoup.findAll('div', {'class' : 'nav-next events-nav-newer'})
+    if not nextNav:
+        '''
+        I think every page has a nav-next element
+        so we shouldn't hit this
+        '''
+        print 'Finishing up'
+        return
+    else:
+        nextPage = nextNav[0].findAll('a', href=True)
+        if not nextPage:
+            '''
+            Finished iterating through all events calendar pages
+            '''
+            print 'Finishing up'
+            return
+        nextUrl = nextPage[0]['href']
+        parseCalendar(nextUrl)
+        return
 
 def soupIt(url):
     '''
