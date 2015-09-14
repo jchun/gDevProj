@@ -155,5 +155,6 @@ def main():
     getEvents(service, 100) 
 
 if __name__ == '__main__':
+    startTime = time.time()
     main()
-
+    print 'Time taken: ' + str(time.time()-startTime) + ' secs'
