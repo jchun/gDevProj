@@ -18,14 +18,37 @@ months = {v: k for k,v in enumerate(calendar.month_abbr)}
 savedLocalEvents = {}
 
 def cleanDate(date):
+    '''
+    Take date string on website and format it
+    '''
     dateSplit = date.split()
-    eventMonth = months[dateSplit[0][0:3]]
-    eventDay = int(re.sub('[^0-9]','', date.split()[1]))
-    eventYear = int(dateSplit[2])
-    eventTime = '0:00'
 
-    eventTimeDate = datetime.date(eventYear, eventMonth, eventDay).isoformat()
-    return eventTimeDate
+    if len(dateSplit) == 3:
+        '''there is no time, only date'''
+        eventMonth = months[dateSplit[0][0:3]]
+        eventDay = int(re.sub('[^0-9]','', date.split()[1]))
+        eventYear = int(dateSplit[2])
+        eventDateTime = datetime.date(eventYear, eventMonth, eventDay).isoformat()
+        return eventDateTime
+
+    elif len(dateSplit) > 3:
+        eventMonth = months[dateSplit[0][0:3]]
+        eventDay = int(re.sub('[^0-9]','', date.split()[1]))
+        eventYear = int(dateSplit[2])
+        dateString = str(eventYear) + '/' + str(eventMonth) + '/' + str(eventDay)
+        
+        hourString, minuteString = str(dateSplit[4]).split(':')
+        if dateSplit[5] == 'pm':
+            hourString = str(int(hourString) + 12)
+        timeString = hourString + ':' + minuteString
+        
+        dateTimeString = dateString + ' - ' + timeString
+        dateTimeStruct = time.strptime(dateTimeString, "%Y/%m/%d - %H:%M")
+        eventDateTime = time.strftime("%G-%m-%dT%H:%M:00", dateTimeStruct)
+        return eventDateTime
+    else:
+        print 'ERROR - Cannot handle time string: ' + date
+        return None
 
 def parseEvent(eventLink):
     '''
@@ -51,21 +74,22 @@ def parseEvent(eventLink):
             date = dateField.findAll('span', { 'class' : 'text' })    
         date = date[0].string
     
+    #following block is for debugging purposes
     ''' 
     print '*' * 15
     print title
     print date
-    print months[date[0:3]]
     print eventLink
     print '*' * 15
     '''
 
     date = cleanDate(date)
-
-    parsedEvent = title, eventLink
-    #print parsedEvent
-    #return parsedEvent
-    savedLocalEvents[date] = parsedEvent
+    parsedEvent = date, eventLink
+    '''
+    We store the event info in this dictionary,
+    which will be accessed from levisEventsCoordinator.py
+    '''
+    savedLocalEvents[title] = parsedEvent
 
 
 def parseCalendar(calendarLink):
@@ -84,7 +108,6 @@ def parseCalendar(calendarLink):
             links = event.findAll('a', href=True)
             eventLink = links[1]['href']
             parseEvent(eventLink)
-            '''@TODO remove following break:'''
 
 def soupIt(url):
     '''

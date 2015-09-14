@@ -5,6 +5,7 @@ import oauth2client
 from oauth2client import client
 from oauth2client import tools
 import os
+import time
 
 import levisParser
 savedLocalEvents = levisParser.savedLocalEvents
@@ -21,7 +22,9 @@ CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Levi\'s Stadium Events Coordinator'
 
 def get_credentials():
-    """Gets valid user credentials from storage.
+    """
+    This function is from Google's quickstart tutorial
+    Gets valid user credentials from storage.
 
     If nothing has been stored, or if the stored credentials are invalid,
     the OAuth2 flow is completed to obtain the new credentials.
@@ -48,34 +51,72 @@ def get_credentials():
         print 'Storing credentials to ' + credential_path
     return credentials
 
-def createEvent(service, eventTimeDate, eventTitle, eventURL):
-    event = {
-      'summary': eventTitle,
-      'location': '4900 Marie P Bartolo Way, Santa Clara, CA 95054',
-      'description': eventURL,
-      'start': {
-        'date': eventTimeDate,
-        'timeZone': 'America/Los_Angeles',
-      },
-      #'''
-      'end': {
-        'date': eventTimeDate,
-        'timeZone': 'America/Los_Angeles',
-      },
-      #'''
-      'reminders': {
-        'useDefault': False,
-        'overrides': [
-          {'method': 'popup', 'minutes': 10},
-        ],
-      },
-    }
+def createEvent(service, eventDateTime, eventTitle, eventURL):
+    if 'T' in eventDateTime:
+        '''
+        Assumptions in scheduling:
+        1. Events will be apx 4 hours long
+        2. No event will start later than 11PM
+        '''
+        eventEndDateHour = 4 + int(eventDateTime.split('T')[1].split(":",1)[0])
+        if eventEndDateHour >= 24:
+            eventEndDateHour = 23
+        eventEndDateTime = eventDateTime.rsplit('T')[0] + 'T' + \
+                           str(eventEndDateHour) + ':' + \
+                           eventDateTime.split('T')[1].split(":",1)[1]
+
+        event = {
+          'summary': eventTitle,
+          'location': '4900 Marie P Bartolo Way, Santa Clara, CA 95054',
+          'description': eventURL,
+          'start': {
+            'dateTime': eventDateTime,
+            'timeZone': 'America/Los_Angeles',
+          },
+          #'''
+          'end': {
+            'dateTime': eventEndDateTime,
+            'timeZone': 'America/Los_Angeles',
+          },
+          #'''
+          'reminders': {
+            'useDefault': False,
+            'overrides': [
+              {'method': 'popup', 'minutes': 10},
+            ],
+          },
+        }
+    else:
+        event = {
+          'summary': eventTitle,
+          'location': '4900 Marie P Bartolo Way, Santa Clara, CA 95054',
+          'description': eventURL,
+          'start': {
+            'date': eventDateTime,
+            'timeZone': 'America/Los_Angeles',
+          },
+          #'''
+          'end': {
+            'date': eventDateTime,
+            'timeZone': 'America/Los_Angeles',
+          },
+          #'''
+          'reminders': {
+            'useDefault': False,
+            'overrides': [
+              {'method': 'popup', 'minutes': 10},
+            ],
+          },
+        }
   
 
     gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
     print 'Event created: %s' % (gEvent.get('htmlLink'))
+
+numRuns = 0
  
 def getEvents(service, numEvents):
+    global numRuns
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
     print 'Getting the upcoming %d events' % (numEvents)
     eventsResult = service.events().list(
@@ -87,17 +128,12 @@ def getEvents(service, numEvents):
         print 'No upcoming events found.'
     for event in events:
         start = event['start'].get('dateTime', event['start'].get('date'))
-        print start, event['summary']
-        #print event
-
-        savedRemoteEvents[start] = event['summary']
+        if (numRuns % 2) != 0:
+            print start, event['summary']
+        savedRemoteEvents[event['summary']] = start
+    numRuns += 1
 
 def main():
-    """Shows basic usage of the Google Calendar API.
-
-    Creates a Google Calendar API service object and outputs a list of the next
-    10 events on the user's calendar.
-    """
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('calendar', 'v3', http=http)
@@ -105,15 +141,16 @@ def main():
     getEvents(service, 100) 
 
     levisParser.main()
-    for (eventTimeDate, eventInfo)  in savedLocalEvents.items():
-        print eventTimeDate 
+    for (eventTitle, eventInfo)  in savedLocalEvents.items():
+        #print eventDateTime 
         #print eventInfo
-        eventTitle, eventURL = eventInfo
+        eventDateTime, eventURL = eventInfo
         
-        if eventTimeDate not in savedRemoteEvents:
-            createEvent(service, eventTimeDate, eventTitle, eventURL)
+        if eventTitle not in savedRemoteEvents:
+            createEvent(service, eventDateTime, eventTitle, eventURL)
         else:
-            print 'Skipping add, we already know this event!'    
+            #print 'Skipping add, we already know this event!'    
+            continue
 
     getEvents(service, 100) 
 
