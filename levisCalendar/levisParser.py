@@ -44,7 +44,7 @@ def cleanDate(date):
         
         dateTimeString = dateString + ' - ' + timeString
         dateTimeStruct = time.strptime(dateTimeString, "%Y/%m/%d - %H:%M")
-        eventDateTime = time.strftime("%G-%m-%dT%H:%M:00", dateTimeStruct)
+        eventDateTime = time.strftime("%Y-%m-%dT%H:%M:00", dateTimeStruct)
         return eventDateTime
     else:
         print 'ERROR - Cannot handle time string: ' + date

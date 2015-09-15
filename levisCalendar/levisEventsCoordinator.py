@@ -58,6 +58,7 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
         1. Events will be apx 4 hours long
         2. No event will start later than 11PM
         '''
+        print 'Creating event...'
         eventEndDateHour = 4 + int(eventDateTime.split('T')[1].split(":",1)[0])
         if eventEndDateHour >= 24:
             eventEndDateHour = 23
@@ -111,7 +112,9 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
   
 
     gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
-    print 'Event created: %s' % (gEvent.get('htmlLink'))
+    print 'Event created: %s' % eventTitle
+    print gEvent.get('htmlLink')
+
 
 numRuns = 0
  
