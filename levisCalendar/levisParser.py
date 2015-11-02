@@ -55,6 +55,8 @@ def parseEvent(eventLink):
     Parse the individual event page
     '''
     eventSoup = soupIt(eventLink)
+    if eventSoup is None:
+        return
    
     titleInfo = eventSoup.findAll('h1', { 'class' : 'page-title' })
 
@@ -97,6 +99,9 @@ def parseCalendar(calendarLink):
     Parse the main events page
     '''
     calSoup = soupIt(calendarLink)
+    if calSoup is None:
+        return
+
     events = calSoup.findAll('article')
     
     if not events:
@@ -108,7 +113,7 @@ def parseCalendar(calendarLink):
             links = event.findAll('a', href=True)
             eventLink = links[1]['href']
             parseEvent(eventLink)
-   
+    
     nextNav = calSoup.findAll('div', {'class' : 'nav-next events-nav-newer'})
     if not nextNav:
         '''
@@ -138,7 +143,11 @@ def soupIt(url):
         soup = BeautifulSoup(u, 'html.parser')
         return soup
     except urllib2.URLError, e:
+        print 'URL Request Error: ' + url
+        '''
         raise NameError('URL Request Error')
+        '''
+        return None
 
 def main():
     parseCalendar(calendarPage)
