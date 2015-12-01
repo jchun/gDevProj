@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 from apiclient import discovery
 import datetime
 import httplib2
