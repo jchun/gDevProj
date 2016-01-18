@@ -39,7 +39,8 @@ def cleanDate(date):
         
         hourString, minuteString = str(dateSplit[4]).split(':')
         if dateSplit[5] == 'pm':
-            hourString = str(int(hourString) + 12)
+            if int(hourString) != 12:
+                hourString = str(int(hourString) + 12)
         timeString = hourString + ':' + minuteString
         
         dateTimeString = dateString + ' - ' + timeString
