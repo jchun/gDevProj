@@ -114,7 +114,8 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
   
 
     gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
-    print 'Event created: %s' % eventTitle
+    print 'Event created: %s - %s' % (eventDateTime, eventTitle)
+    print eventURL 
     print gEvent.get('htmlLink')
 
 
@@ -123,7 +124,9 @@ numRuns = 0
 def getEvents(service, numEvents):
     global numRuns
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    print 'Getting the upcoming %d events' % (numEvents)
+    if (numRuns %2) != 0:
+        print 'Fetching the upcoming %d events' % (numEvents)
+        print '*' * 15
     eventsResult = service.events().list(
         calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', timeMin=now, maxResults=numEvents, singleEvents=True,
         orderBy='startTime').execute()
@@ -132,10 +135,15 @@ def getEvents(service, numEvents):
     if not events:
         print 'No upcoming events found.'
     for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
+        eventTitle = event['summary']
+        eventStart = event['start'].get('dateTime', event['start'].get('date'))
+        eventURL = event['description']
+        eventId = event['id']
         if (numRuns % 2) != 0:
-            print start, event['summary']
-        savedRemoteEvents[event['summary']] = start
+            print eventStart, eventTitle
+            print eventURL
+            print '*' * 15
+        savedRemoteEvents[eventURL] = eventTitle, eventStart, eventId
     numRuns += 1
 
 def main():
@@ -146,14 +154,35 @@ def main():
     getEvents(service, 100) 
 
     levisParser.main()
-    for (eventTitle, eventInfo)  in savedLocalEvents.items():
+    for (eventTitle, eventInfo) in savedLocalEvents.items():
         eventDateTime, eventURL = eventInfo
-        
-        if eventTitle not in savedRemoteEvents:
+        if eventURL not in savedRemoteEvents:
+            ''' We might already know the event, see if we should update '''
+            ''' See if we match any of our existing event names '''
+            for (remoteURL, remoteInfo) in savedRemoteEvents.items():
+                remoteTitle, remoteStart, remoteId = remoteInfo
+                ''' we're not support checking matching time yet '''
+                if (remoteTitle == eventTitle): #or (remoteStart == eventDateTime):
+                    print 'Update the following event:'
+                    print remoteTitle + ', ' + remoteStart
+                    ''' Lets delete the old event before creating new '''
+                    print 'Deleting old event...'
+                    service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
+                    break
             createEvent(service, eventDateTime, eventTitle, eventURL)
         else:
-            #print 'Skipping add, we already know this event!'    
-            continue
+            ''' We have the URL of the event '''
+            ''' but we may need to update '''
+            if 'T' in eventDateTime:
+                ''' Check if there is a time added to the Events Page '''
+                remoteTitle, remoteStart, remoteId = savedRemoteEvents[eventURL]
+                if 'T' not in remoteStart:
+                    print 'Update the time of following event: '
+                    print remoteTitle + ', ' + remoteStart
+                    ''' Lets delete the old event before creating new '''
+                    print 'Deleting old event...'
+                    service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
+                    createEvent(service, eventDateTime, eventTitle, eventURL)
 
     getEvents(service, 100) 
 

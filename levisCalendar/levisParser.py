@@ -121,7 +121,7 @@ def parseCalendar(calendarLink):
         I think every page has a nav-next element
         so we shouldn't hit this
         '''
-        print 'Finishing up'
+        #print 'Finishing up'
         return
     else:
         nextPage = nextNav[0].findAll('a', href=True)
@@ -129,7 +129,7 @@ def parseCalendar(calendarLink):
             '''
             Finished iterating through all events calendar pages
             '''
-            print 'Finishing up'
+            #print 'Finishing up'
             return
         nextUrl = nextPage[0]['href']
         parseCalendar(nextUrl)
