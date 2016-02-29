@@ -10,6 +10,7 @@ import os
 import time
 
 import levisParser
+from levisParser import bcolors
 savedLocalEvents = levisParser.savedLocalEvents
 savedRemoteEvents = {}
 
@@ -50,7 +51,8 @@ def get_credentials():
             credentials = tools.run_flow(flow, store, flags)
         else: # Needed only for compatability with Python 2.6
             credentials = tools.run(flow, store)
-        print 'Storing credentials to ' + credential_path
+        print bcolors.WARNING + 'Storing credentials to ' + credential_path +\
+                bcolors.ENDC
     return credentials
 
 def createEvent(service, eventDateTime, eventTitle, eventURL):
@@ -60,7 +62,6 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
         1. Events will be apx 4 hours long
         2. No event will start later than 11PM
         '''
-        print 'Creating event...'
         eventEndDateHour = 4 + int(eventDateTime.split('T')[1].split(":",1)[0])
         if eventEndDateHour >= 24:
             eventEndDateHour = 23
@@ -114,9 +115,11 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
   
 
     gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
-    print 'Event created: %s - %s' % (eventDateTime, eventTitle)
-    print eventURL 
-    print gEvent.get('htmlLink')
+    print bcolors.OKGREEN + bcolors.BOLD + \
+            'Event created: %s - %s' % (eventDateTime, eventTitle) +\
+            bcolors.ENDC
+    print bcolors.OKGREEN + bcolors.UNDERLINE + eventURL 
+    print gEvent.get('htmlLink') + bcolors.ENDC
 
 
 numRuns = 0
@@ -125,7 +128,8 @@ def getEvents(service, numEvents):
     global numRuns
     now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
     if (numRuns %2) != 0:
-        print 'Fetching the upcoming %d events' % (numEvents)
+        print bcolors.OKBLUE + 'Fetching the upcoming %d events' % (numEvents) +\
+                bcolors.ENDC
         print '*' * 15
     eventsResult = service.events().list(
         calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', timeMin=now, maxResults=numEvents, singleEvents=True,
@@ -163,8 +167,8 @@ def main():
                 remoteTitle, remoteStart, remoteId = remoteInfo
                 ''' we're not support checking matching time yet '''
                 if (remoteTitle == eventTitle): #or (remoteStart == eventDateTime):
-                    print 'Update the following event:'
-                    print remoteTitle + ', ' + remoteStart
+                    print bcolors.OKGREEN + 'Update the following event:'
+                    print remoteTitle + ', ' + remoteStart + bcolors.ENDC
                     ''' Lets delete the old event before creating new '''
                     print 'Deleting old event...'
                     service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
@@ -177,8 +181,8 @@ def main():
                 ''' Check if there is a time added to the Events Page '''
                 remoteTitle, remoteStart, remoteId = savedRemoteEvents[eventURL]
                 if 'T' not in remoteStart:
-                    print 'Update the time of following event: '
-                    print remoteTitle + ', ' + remoteStart
+                    print bcolors.OKGREEN + 'Update the time of following event: '
+                    print remoteTitle + ', ' + remoteStart + bcolors.ENDC
                     ''' Lets delete the old event before creating new '''
                     print 'Deleting old event...'
                     service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
@@ -189,4 +193,6 @@ def main():
 if __name__ == '__main__':
     startTime = time.time()
     main()
-    print 'Time taken: ' + str(time.time()-startTime) + ' secs'
+    print bcolors.OKBLUE + \
+            'Time taken: ' + str(time.time()-startTime) + ' secs' + \
+            bcolors.ENDC

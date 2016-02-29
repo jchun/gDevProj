@@ -17,6 +17,16 @@ calendarPage = 'http://www.levisstadium.com/events/category/tickets/'
 months = {v: k for k,v in enumerate(calendar.month_abbr)}
 savedLocalEvents = {}
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 def cleanDate(date):
     '''
     Take date string on website and format it
@@ -48,7 +58,8 @@ def cleanDate(date):
         eventDateTime = time.strftime("%Y-%m-%dT%H:%M:00", dateTimeStruct)
         return eventDateTime
     else:
-        print 'ERROR - Cannot handle time string: ' + date
+        print bcolors.FAIL + 'ERROR - Cannot handle time string: ' + date + \
+                bcolors.ENDC
         return None
 
 def parseEvent(eventLink):
@@ -62,7 +73,8 @@ def parseEvent(eventLink):
     titleInfo = eventSoup.findAll('h1', { 'class' : 'page-title' })
 
     if not titleInfo:
-        print 'No title found, skipping add'
+        print bcolors.FAIL + 'No title found, skipping add' + \
+                bcolors.ENDC
         
     else:
         title = titleInfo[0].string.strip()
@@ -70,7 +82,8 @@ def parseEvent(eventLink):
     dateInfo = eventSoup.findAll('div', { 'class' : 'date' })
 
     if not dateInfo:
-        print 'No dates found, skipping add'
+        print bcolors.FAIL + 'No dates found, skipping add' + \
+                bcolors.ENDC
         
     else:
         for dateField in dateInfo:
@@ -106,7 +119,7 @@ def parseCalendar(calendarLink):
     events = calSoup.findAll('article')
     
     if not events:
-        print 'No events found'
+        print bcolors.FAIL + 'No events found' + bcolors.ENDC
         return
     
     else:
@@ -144,7 +157,7 @@ def soupIt(url):
         soup = BeautifulSoup(u, 'html.parser')
         return soup
     except urllib2.URLError, e:
-        print 'URL Request Error: ' + url
+        print bcolors.FAIL + 'URL Request Error: ' + url + bcolors.ENDC
         '''
         raise NameError('URL Request Error')
         '''
@@ -167,4 +180,6 @@ if __name__ == '__main__':
    
     main()    
 
-    print 'Time taken: ' + str(time.time()-startTime) + ' secs'
+    print bcolors.OKBLUE + \
+            'Time taken: ' + str(time.time()-startTime) + ' secs' +\
+            bcolors.ENDC
