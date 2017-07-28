@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 '''
 Created by Joseph Chun
@@ -11,7 +11,7 @@ import datetime
 import os
 import re
 import time
-import urllib2
+import urllib3
 
 calendarPage = 'http://www.levisstadium.com/events/category/tickets/'
 months = {v: k for k,v in enumerate(calendar.month_abbr)}
@@ -58,8 +58,8 @@ def cleanDate(date):
         eventDateTime = time.strftime("%Y-%m-%dT%H:%M:00", dateTimeStruct)
         return eventDateTime
     else:
-        print bcolors.FAIL + 'ERROR - Cannot handle time string: ' + date + \
-                bcolors.ENDC
+        print(bcolors.FAIL + 'ERROR - Cannot handle time string: ' + date + \
+                bcolors.ENDC)
         return None
 
 def parseEvent(eventLink):
@@ -73,8 +73,8 @@ def parseEvent(eventLink):
     titleInfo = eventSoup.findAll('h1', { 'class' : 'page-title' })
 
     if not titleInfo:
-        print bcolors.FAIL + 'No title found, skipping add' + \
-                bcolors.ENDC
+        print(bcolors.FAIL + 'No title found, skipping add' + \
+                bcolors.ENDC)
         
     else:
         title = titleInfo[0].string.strip()
@@ -82,8 +82,8 @@ def parseEvent(eventLink):
     dateInfo = eventSoup.findAll('div', { 'class' : 'date' })
 
     if not dateInfo:
-        print bcolors.FAIL + 'No dates found, skipping add' + \
-                bcolors.ENDC
+        print(bcolors.FAIL + 'No dates found, skipping add' + \
+                bcolors.ENDC)
         
     else:
         for dateField in dateInfo:
@@ -92,11 +92,11 @@ def parseEvent(eventLink):
     
     #following block is for debugging purposes
     ''' 
-    print '*' * 15
-    print title
-    print date
-    print eventLink
-    print '*' * 15
+    print('*' * 15)
+    print(title)
+    print(date)
+    print(eventLink)
+    print('*' * 15)
     '''
 
     date = cleanDate(date)
@@ -119,7 +119,7 @@ def parseCalendar(calendarLink):
     events = calSoup.findAll('article')
     
     if not events:
-        print bcolors.FAIL + 'No events found' + bcolors.ENDC
+        print(bcolors.FAIL + 'No events found' + bcolors.ENDC)
         return
     
     else:
@@ -134,7 +134,7 @@ def parseCalendar(calendarLink):
         I think every page has a nav-next element
         so we shouldn't hit this
         '''
-        #print 'Finishing up'
+        #print('Finishing up')
         return
     else:
         nextPage = nextNav[0].findAll('a', href=True)
@@ -142,7 +142,7 @@ def parseCalendar(calendarLink):
             '''
             Finished iterating through all events calendar pages
             '''
-            #print 'Finishing up'
+            #print('Finishing up')
             return
         nextUrl = nextPage[0]['href']
         parseCalendar(nextUrl)
@@ -153,13 +153,14 @@ def soupIt(url):
     Given a url, generate and return the BeautifulSoup
     '''
     try:
-        u = urllib2.urlopen(url, timeout=3)
-        soup = BeautifulSoup(u, 'html.parser')
+        http = urllib3.PoolManager()
+        response = http.request('GET', url)
+        soup = BeautifulSoup(response.data, "html.parser")
         return soup
-    except urllib2.URLError, e:
-        print bcolors.FAIL + 'URL Request Error: ' + url + bcolors.ENDC
+    except urllib3.exceptions.TimeoutError:
+        print(bcolors.FAIL + 'Timeout Error: ' + url + bcolors.ENDC)
         '''
-        raise NameError('URL Request Error')
+        raise NameError('Timeout Error')
         '''
         return None
 
@@ -175,11 +176,11 @@ if __name__ == '__main__':
     parser.add_argument('-v', dest='verbose', action='store_true')
     args = parser.parse_args()
     
-    #print 'args: ' + str(args)
+    #print('args: ' + str(args))
     #'''
    
     main()    
 
-    print bcolors.OKBLUE + \
+    print(bcolors.OKBLUE + \
             'Time taken: ' + str(time.time()-startTime) + ' secs' +\
-            bcolors.ENDC
+            bcolors.ENDC)
