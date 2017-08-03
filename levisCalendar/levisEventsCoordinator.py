@@ -7,12 +7,15 @@ import oauth2client
 from oauth2client import client
 from oauth2client import tools
 import os
+import re
+import smtplib
 import time
 
 import levisParser
 from levisParser import bcolors
 savedLocalEvents = levisParser.savedLocalEvents
 savedRemoteEvents = {}
+newEvents = []
 
 try:
     import argparse
@@ -54,6 +57,51 @@ def get_credentials():
         print(bcolors.WARNING + 'Storing credentials to ' + credential_path +\
                 bcolors.ENDC)
     return credentials
+
+def constructEmail():
+    message = ''
+    for event in newEvents:
+        eventDateTime, eventTitle, eventURL, htmlLink = event
+        message += '\n\n'
+        message += (eventTitle + ' - ' + \
+                    eventDateTime + '\n' + \
+                    eventURL + '\n' + \
+                    htmlLink + '\n')
+    # following line we replace en-dash with hypens due to 
+    # ascii encoding (not) supported for en-dash on smtplib
+    message = re.sub(u"\u2013", "-", message)
+    return message
+
+def sendEmail():
+    events_info = constructEmail()
+
+    if not events_info:
+        print("No new events have been created, no need to email")
+        return
+
+    to = 'joeyeatsspam@gmail.com' 
+    gmail_user = 'joeyalerter@gmail.com'
+    gmail_pwd = '***' #@TODO replace password
+    smtpserver = smtplib.SMTP("smtp.gmail.com",587)
+    # identify ourselves to smtp gmail client
+    smtpserver.ehlo()
+    # secure our email with tls encryption
+    smtpserver.starttls()
+    # re-identify ourselves as an ecrypted connection
+    smtpserver.ehlo()
+    smtpserver.login(gmail_user, gmail_pwd)
+    header = 'To:' + to + '\n' + 'From: ' + gmail_user + '\n' + \
+             'Subject: Levi\'s Stadium Event Notification\n'
+    
+    msg_intro = 'Here are some new upcoming events: \n'
+    
+    content =  msg_intro + events_info 
+    
+    msg = header + '\n' + content
+
+    #print(msg) #@TODO debug print
+    smtpserver.sendmail(gmail_user, to, msg) #@TODO comment out to disable send
+    smtpserver.close()
 
 def createEvent(service, eventDateTime, eventTitle, eventURL):
     if 'T' in eventDateTime:
@@ -113,15 +161,24 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
           },
         }
   
-
     gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
+    # Lets add the new event to the newEvent list in case we want to email it out
+    newEvent = (eventDateTime, eventTitle, eventURL, gEvent.get('htmlLink'))
+    newEvents.append(newEvent)
+
+    # Print to console
     print(bcolors.OKGREEN + bcolors.BOLD + \
             'Event created: %s - %s' % (eventDateTime, eventTitle) +\
             bcolors.ENDC)
     print(bcolors.OKGREEN + bcolors.UNDERLINE + eventURL)
     print(gEvent.get('htmlLink') + bcolors.ENDC)
 
-
+'''
+Purpose of numRuns is to keep track of which time this was called
+During 0th call, we use it only to fetch (and not print) existing calendar
+During 1st call, we use it to fetch & print updated/existing calendar
+getEvents function assumes it will be called exactly twice for those purposes
+'''
 numRuns = 0
  
 def getEvents(service, numEvents):
@@ -189,6 +246,7 @@ def main():
                     createEvent(service, eventDateTime, eventTitle, eventURL)
 
     getEvents(service, 100) 
+    sendEmail()
 
 if __name__ == '__main__':
     startTime = time.time()
