@@ -12,7 +12,17 @@ import os
 import re
 import time
 import urllib3
+import logging
 
+''' Logging '''
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+logFileName = 'logs/' + time.strftime("levisCal_%Y_%m_%d_%H_%M_%S.log")
+logging.basicConfig(filename=logFileName,\
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+''' Globals '''
 calendarPage = 'http://www.levisstadium.com/events/category/tickets/'
 months = {v: k for k,v in enumerate(calendar.month_abbr)}
 savedLocalEvents = {}
@@ -60,6 +70,7 @@ def cleanDate(date):
     else:
         print(bcolors.FAIL + 'ERROR - Cannot handle time string: ' + date + \
                 bcolors.ENDC)
+        logger.error('Cannot handle time string: ' + date)
         return None
 
 def parseEvent(eventLink):
@@ -75,6 +86,7 @@ def parseEvent(eventLink):
     if not titleInfo:
         print(bcolors.FAIL + 'No title found, skipping add' + \
                 bcolors.ENDC)
+        logger.warning('No title found, skipping add')
         
     else:
         title = titleInfo[0].string.strip()
@@ -84,6 +96,7 @@ def parseEvent(eventLink):
     if not dateInfo:
         print(bcolors.FAIL + 'No dates found, skipping add' + \
                 bcolors.ENDC)
+        logger.warning('No dates found, skipping add')
         
     else:
         for dateField in dateInfo:
@@ -120,6 +133,7 @@ def parseCalendar(calendarLink):
     
     if not events:
         print(bcolors.FAIL + 'No events found' + bcolors.ENDC)
+        logger.info('No events found')
         return
     
     else:
@@ -159,13 +173,16 @@ def soupIt(url):
         return soup
     except urllib3.exceptions.TimeoutError:
         print(bcolors.FAIL + 'Timeout Error: ' + url + bcolors.ENDC)
+        logger.critical('Timeout Error: ' + url)
         '''
         raise NameError('Timeout Error')
         '''
         return None
 
 def main():
+    logger.info('Parsing: ' + calendarPage)
     parseCalendar(calendarPage)
+    logger.info('Finished parsing')
 
 if __name__ == '__main__':
     startTime = time.time()
@@ -184,3 +201,5 @@ if __name__ == '__main__':
     print(bcolors.OKBLUE + \
             'Time taken: ' + str(time.time()-startTime) + ' secs' +\
             bcolors.ENDC)
+    logger.info('Time taken: ' + str(time.time()-startTime) + ' secs')
+

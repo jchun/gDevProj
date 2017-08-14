@@ -10,6 +10,7 @@ import os
 import re
 import smtplib
 import time
+import logging
 
 import levisParser
 from levisParser import bcolors
@@ -23,6 +24,15 @@ try:
 except ImportError:
     flags = None
 
+''' Logging '''
+if not os.path.exists('logs'):
+        os.makedirs('logs')
+logFileName = 'logs/'+time.strftime("levisCal_%Y_%m_%d_%H_%M_%S.log")
+logging.basicConfig(filename=logFileName,\
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+''' Google API Stuff '''
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Levi\'s Stadium Events Coordinator'
@@ -56,6 +66,7 @@ def get_credentials():
             credentials = tools.run(flow, store)
         print(bcolors.WARNING + 'Storing credentials to ' + credential_path +\
                 bcolors.ENDC)
+        logger.warning('Storing credentials to ' + credential_path)
     return credentials
 
 def constructEmail():
@@ -77,6 +88,7 @@ def sendEmail():
 
     if not events_info:
         print("No new events have been created, no need to email")
+        logger.info("No new events have been created, no need to email")
         return
 
     to = 'joeyeatsspam@gmail.com' 
@@ -99,8 +111,7 @@ def sendEmail():
     
     msg = header + '\n' + content
 
-    #print(msg) #@TODO debug print
-    smtpserver.sendmail(gmail_user, to, msg) #@TODO comment out to disable send
+    smtpserver.sendmail(gmail_user, to, msg) 
     smtpserver.close()
 
 def createEvent(service, eventDateTime, eventTitle, eventURL):
@@ -173,6 +184,11 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
     print(bcolors.OKGREEN + bcolors.UNDERLINE + eventURL)
     print(gEvent.get('htmlLink') + bcolors.ENDC)
 
+    logger.info('Event created: %s - %s' % \
+                (eventDateTime, eventTitle))
+    logger.info(eventURL)
+    logger.info(gEvent.get('htmlLink'))
+
 '''
 Purpose of numRuns is to keep track of which time this was called
 During 0th call, we use it only to fetch (and not print) existing calendar
@@ -208,13 +224,18 @@ def getEvents(service, numEvents):
     numRuns += 1
 
 def main():
+    ''' Grab credentials '''
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
-    service = discovery.build('calendar', 'v3', http=http)
+    service = discovery.build('calendar', 'v3', http=http, cache_discovery=False)
     
+    ''' Grab events from calendar '''
     getEvents(service, 100) 
 
+    ''' Parse website '''
     levisParser.main()
+
+    ''' Process results from parsing '''
     for (eventTitle, eventInfo) in savedLocalEvents.items():
         eventDateTime, eventURL = eventInfo
         if eventURL not in savedRemoteEvents:
@@ -226,8 +247,11 @@ def main():
                 if (remoteTitle == eventTitle): #or (remoteStart == eventDateTime):
                     print(bcolors.OKGREEN + 'Update the following event:')
                     print(remoteTitle + ', ' + remoteStart + bcolors.ENDC)
+                    logger.info('Update the following event:')
+                    logger.info(remoteTitle + ', ' + remoteStart)
                     ''' Lets delete the old event before creating new '''
                     print('Deleting old event...')
+                    logger.info('Deleting old event...')
                     service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
                     break
             createEvent(service, eventDateTime, eventTitle, eventURL)
@@ -240,8 +264,11 @@ def main():
                 if 'T' not in remoteStart:
                     print(bcolors.OKGREEN + 'Update the time of following event: ')
                     print(remoteTitle + ', ' + remoteStart + bcolors.ENDC)
+                    logger.info('Update the time of the following event: ')
+                    logger.info(remoteTitle + ', ' + remoteStart)
                     ''' Lets delete the old event before creating new '''
                     print('Deleting old event...')
+                    logger.info('Deleting old event...')
                     service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
                     createEvent(service, eventDateTime, eventTitle, eventURL)
 
@@ -250,7 +277,9 @@ def main():
 
 if __name__ == '__main__':
     startTime = time.time()
+
     main()
     print(bcolors.OKBLUE + \
             'Time taken: ' + str(time.time()-startTime) + ' secs' + \
             bcolors.ENDC)
+    logger.info('Time taken: ' + str(time.time()-startTime) + ' secs')
