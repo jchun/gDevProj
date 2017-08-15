@@ -4,7 +4,6 @@
 Created by Joseph Chun
 August 27th 2015
 '''
-import argparse
 from bs4 import BeautifulSoup
 import calendar
 import datetime
@@ -187,15 +186,6 @@ def main():
 if __name__ == '__main__':
     startTime = time.time()
     
-    #'''
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output')
-    parser.add_argument('-v', dest='verbose', action='store_true')
-    args = parser.parse_args()
-    
-    #print('args: ' + str(args))
-    #'''
-   
     main()    
 
     print(bcolors.OKBLUE + \

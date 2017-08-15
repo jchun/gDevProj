@@ -10,24 +10,21 @@ import os
 import re
 import smtplib
 import time
-import logging
 
-import levisParser
-from levisParser import bcolors
-savedLocalEvents = levisParser.savedLocalEvents
+''' parser-related '''
+import parser
+from parser import bcolors
+savedLocalEvents = parser.savedLocalEvents
 savedRemoteEvents = {}
 newEvents = []
 
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
-
 ''' Logging '''
-if not os.path.exists('logs'):
-        os.makedirs('logs')
-logFileName = 'logs/'+time.strftime("levisCal_%Y_%m_%d_%H_%M_%S.log")
+import logging
+import logManager
+logsPath = 'logs'
+if not os.path.exists(logsPath):
+    os.makedirs(logsPath)
+logFileName = logsPath + '/' + time.strftime("levisCal_%Y_%m_%d_%H_%M_%S.log")
 logging.basicConfig(filename=logFileName,\
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +33,12 @@ logger = logging.getLogger(__name__)
 SCOPES = 'https://www.googleapis.com/auth/calendar'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Levi\'s Stadium Events Coordinator'
+try:
+    import argparse
+    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+    flags = None
+
 
 def get_credentials():
     """
@@ -224,6 +227,7 @@ def getEvents(service, numEvents):
     numRuns += 1
 
 def main():
+    logManager.main(logsPath)
     ''' Grab credentials '''
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
@@ -233,7 +237,7 @@ def main():
     getEvents(service, 100) 
 
     ''' Parse website '''
-    levisParser.main()
+    parser.main()
 
     ''' Process results from parsing '''
     for (eventTitle, eventInfo) in savedLocalEvents.items():
