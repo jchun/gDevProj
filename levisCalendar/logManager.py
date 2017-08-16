@@ -1,4 +1,8 @@
 #! /usr/bin/env python3
+'''
+Created by Joseph Chun
+August 15th 2017
+'''
 import logging
 import os
 import sys

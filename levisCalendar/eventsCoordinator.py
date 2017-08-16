@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+''' required for Google-API '''
 from apiclient import discovery
 import datetime
 import httplib2
@@ -10,14 +11,16 @@ import os
 import re
 import smtplib
 import time
-
+''' Config-related '''
+import configparser
+import errno
+import sys
 ''' parser-related '''
 import parser
 from parser import bcolors
 savedLocalEvents = parser.savedLocalEvents
 savedRemoteEvents = {}
 newEvents = []
-
 ''' Logging '''
 import logging
 import logManager
@@ -31,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 ''' Google API Stuff '''
 SCOPES = 'https://www.googleapis.com/auth/calendar'
-CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Levi\'s Stadium Events Coordinator'
 try:
     import argparse
@@ -94,9 +96,9 @@ def sendEmail():
         logger.info("No new events have been created, no need to email")
         return
 
-    to = 'joeyeatsspam@gmail.com' 
-    gmail_user = 'joeyalerter@gmail.com'
-    gmail_pwd = '***' #@TODO replace password
+    to = RECIPIENT_EMAIL
+    gmail_user = ALERTER_EMAIL
+    gmail_pwd = ALERTER_PASSWORD
     smtpserver = smtplib.SMTP("smtp.gmail.com",587)
     # identify ourselves to smtp gmail client
     smtpserver.ehlo()
@@ -104,16 +106,25 @@ def sendEmail():
     smtpserver.starttls()
     # re-identify ourselves as an ecrypted connection
     smtpserver.ehlo()
-    smtpserver.login(gmail_user, gmail_pwd)
+
+    ''' Login to Server '''
+    try:
+        smtpserver.login(gmail_user, gmail_pwd)
+    except smtplib.SMTPAuthenticationError:
+        print(bcolors.FAIL + 'Failed sending email, check Alerter '
+              '& AlerterPwd fields in settings.conf' + bcolors.ENDC)
+        logger.error('Failed sending email, check Alerter '
+                     '& AlerterPwd fields in settings.conf')
+        smtpserver.close()
+        return
+    
+    ''' Finish filling in all fields of email '''
     header = 'To:' + to + '\n' + 'From: ' + gmail_user + '\n' + \
              'Subject: Levi\'s Stadium Event Notification\n'
-    
     msg_intro = 'Here are some new upcoming events: \n'
-    
     content =  msg_intro + events_info 
-    
     msg = header + '\n' + content
-
+    ''' Send Email, then close connection '''
     smtpserver.sendmail(gmail_user, to, msg) 
     smtpserver.close()
 
@@ -175,7 +186,7 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
           },
         }
   
-    gEvent = service.events().insert(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', body=event).execute()
+    gEvent = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
     # Lets add the new event to the newEvent list in case we want to email it out
     newEvent = (eventDateTime, eventTitle, eventURL, gEvent.get('htmlLink'))
     newEvents.append(newEvent)
@@ -208,7 +219,7 @@ def getEvents(service, numEvents):
                 bcolors.ENDC)
         print('*' * 15)
     eventsResult = service.events().list(
-        calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', timeMin=now, maxResults=numEvents, singleEvents=True,
+        calendarId=CALENDAR_ID, timeMin=now, maxResults=numEvents, singleEvents=True,
         orderBy='startTime').execute()
     events = eventsResult.get('items', [])
 
@@ -226,8 +237,84 @@ def getEvents(service, numEvents):
         savedRemoteEvents[eventURL] = eventTitle, eventStart, eventId
     numRuns += 1
 
+def loadConfig():
+    global LOGGING_LEVEL
+    global CLIENT_SECRET_FILE
+    global RECIPIENT_EMAIL
+    global ALERTER_EMAIL
+    global ALERTER_PASSWORD
+    global CALENDAR_ID
+
+    configError = False
+
+    defaultConfig = {'LoggingLevel': 'info',
+                     'ClientSecretFile' : 'client_secret.json',}
+    config = configparser.ConfigParser(defaultConfig)
+    config.read('settings.conf')
+
+    '''
+    Following fields have default values in source code,
+    Safe to read without a try/except if/else
+    '''
+    LOGGING_LEVEL =      config['FILEINFO']['LoggingLevel']
+    CLIENT_SECRET_FILE = config['FILEINFO']['ClientSecretFile']
+
+    '''
+    Following are critical fields from settings.conf
+    Exit if any of these fields are not set
+    @TODO: add error checking for format of config options
+    '''
+    ''' Recipient '''
+    if config.has_option('USERINFO', 'Recipient'):
+        RECIPIENT_EMAIL = config['USERINFO']['Recipient']
+    else:
+        configError = True
+        print('No Recipient specified in settings.conf!')
+        logger.error('No Recipient specified in settings.conf!')
+    ''' Alerter '''
+    if config.has_option('USERINFO', 'Alerter'):
+        ALERTER_EMAIL = config['USERINFO']['Alerter']
+    else:
+        configError = True
+        print('No Alerter specified in settings.conf!')
+        logger.error('No Alerter specified in settings.conf!')
+    ''' AlerterPwd '''
+    if config.has_option('USERINFO', 'AlerterPwd'):
+        ALERTER_PASSWORD = config['USERINFO']['AlerterPwd']
+    else:
+        configError = True
+        print('No AlerterPwd specified in settings.conf!')
+        logger.error('No AlerterPwd specified in settings.conf!')
+    ''' CalendarId '''
+    if config.has_option('USERINFO', 'CalendarId'):
+        CALENDAR_ID = config['USERINFO']['CalendarId']
+    else:
+        configError = True
+        print('No CalendarId specified in settings.conf!')
+        logger.error('No CalendarId specified in settings.conf!')
+
+    ''' Exit if any of the critical fields are missing from settings.conf '''
+    if configError:
+        print('Exiting...')
+        logger.error('Exiting...')
+        sys.exit(errno.EINVAL)
+
+    logger.info('LOGGING_LEVEL=%s'      % LOGGING_LEVEL)
+    logger.info('CLIENT_SECRET_FILE=%s' % CLIENT_SECRET_FILE)
+    logger.info('RECIPIENT_EMAIL=%s'    % RECIPIENT_EMAIL)
+    logger.info('ALERTER_EMAIL=%s'      % ALERTER_EMAIL)
+    logger.info('ALERTER_PASSWORD=%s'   % ALERTER_PASSWORD)
+    logger.info('CALENDAR_ID=%s'        % CALENDAR_ID)
+
+
 def main():
+    ''' Logging housekeeping '''
     logManager.main(logsPath)
+    ''' Load config '''
+    loadConfig()
+    ''' Set LoggingLevel set in settings.conf '''
+    logger.setLevel(LOGGING_LEVEL)
+    logger.info('Logger level set to %s', LOGGING_LEVEL)
     ''' Grab credentials '''
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
@@ -256,7 +343,7 @@ def main():
                     ''' Lets delete the old event before creating new '''
                     print('Deleting old event...')
                     logger.info('Deleting old event...')
-                    service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
+                    service.events().delete(calendarId=CALENDAR_ID, eventId=remoteId).execute()
                     break
             createEvent(service, eventDateTime, eventTitle, eventURL)
         else:
@@ -273,7 +360,7 @@ def main():
                     ''' Lets delete the old event before creating new '''
                     print('Deleting old event...')
                     logger.info('Deleting old event...')
-                    service.events().delete(calendarId='ahr56gto4a44e4uj2bumer2h5k@group.calendar.google.com', eventId=remoteId).execute()
+                    service.events().delete(calendarId=CALENDAR_ID, eventId=remoteId).execute()
                     createEvent(service, eventDateTime, eventTitle, eventURL)
 
     getEvents(service, 100) 

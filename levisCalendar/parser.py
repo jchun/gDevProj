@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 '''
 Created by Joseph Chun
 August 27th 2015
