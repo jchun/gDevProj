@@ -1,5 +1,8 @@
 #! /usr/bin/env python3
-
+'''
+Created by Joseph Chun
+September 8th 2015
+'''
 ''' required for Google-API '''
 from apiclient import discovery
 import datetime
