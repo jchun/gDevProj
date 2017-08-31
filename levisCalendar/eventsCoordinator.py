@@ -162,7 +162,7 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
           'reminders': {
             'useDefault': False,
             'overrides': [
-              {'method': 'popup', 'minutes': 10},
+              {'method': 'popup', 'minutes': 180},
             ],
           },
         }
@@ -184,7 +184,7 @@ def createEvent(service, eventDateTime, eventTitle, eventURL):
           'reminders': {
             'useDefault': False,
             'overrides': [
-              {'method': 'popup', 'minutes': 10},
+              {'method': 'popup', 'minutes': 180},
             ],
           },
         }
