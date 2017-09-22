@@ -89,6 +89,7 @@ def constructEmail():
     # following line we replace en-dash with hypens due to 
     # ascii encoding (not) supported for en-dash on smtplib
     message = re.sub(u"\u2013", "-", message)
+    message = re.sub(u"\u2019", "'", message)
     return message
 
 def sendEmail():
