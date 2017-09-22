@@ -30,7 +30,7 @@ def deleteOlderThanXDays(days, path):
     for f in os.listdir(path):
         f = os.path.join(path, f)
         if os.stat(f).st_mtime < now - (days * 86400):
-            if os.path.isfile(f) and f.endswith(extension):
+            if os.path.isfile(f) and f.endswith('.log'):
                 logging.info('Deleting old log file ' + str(f))
                 os.remove(os.path.join(path, f))
                 filesRemoved += 1
