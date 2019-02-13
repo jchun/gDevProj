@@ -3,13 +3,8 @@
 Created by Joseph Chun
 September 8th 2015
 '''
-''' required for Google-API '''
-from apiclient import discovery
+''' Basic Libs '''
 import datetime
-import httplib2
-import oauth2client
-from oauth2client import client
-from oauth2client import tools
 import os
 import re
 import smtplib
@@ -34,48 +29,37 @@ logFileName = logsPath + '/' + time.strftime("levisCal_%Y_%m_%d_%H_%M_%S.log")
 logging.basicConfig(filename=logFileName,\
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
+''' required for Google-API '''
+import pickle
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 
 ''' Google API Stuff '''
-SCOPES = 'https://www.googleapis.com/auth/calendar'
-APPLICATION_NAME = 'Levi\'s Stadium Events Coordinator'
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ['https://www.googleapis.com/auth/calendar']
 
+def getCredentials():
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                    CLIENT_SECRET_FILE, SCOPES)
+            creds = flow.run_local_server()
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+    return creds
 
-def get_credentials():
-    """
-    This function is from Google's quickstart tutorial
-    Gets valid user credentials from storage.
-
-    If nothing has been stored, or if the stored credentials are invalid,
-    the OAuth2 flow is completed to obtain the new credentials.
-
-    Returns:
-        Credentials, the obtained credential.
-    """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir,
-                                   'calendar-quickstart.json')
-
-    store = oauth2client.file.Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatability with Python 2.6
-            credentials = tools.run(flow, store)
-        print(bcolors.WARNING + 'Storing credentials to ' + credential_path +\
-                bcolors.ENDC)
-        logger.warning('Storing credentials to ' + credential_path)
-    return credentials
 
 def constructEmail():
     message = ''
@@ -320,9 +304,8 @@ def main():
     logger.setLevel(LOGGING_LEVEL)
     logger.info('Logger level set to %s', LOGGING_LEVEL)
     ''' Grab credentials '''
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    service = discovery.build('calendar', 'v3', http=http, cache_discovery=False)
+    creds = getCredentials()
+    service = build('calendar', 'v3', credentials=creds)
     
     ''' Grab events from calendar '''
     getEvents(service, 100) 
